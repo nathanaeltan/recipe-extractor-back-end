@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+recipe-scrapers
+ollama
+beautifulsoup4
+requests
+python-multipart
+passlib[bcrypt]
+pydantic[email]
+python-jose[cryptography]
+alembic

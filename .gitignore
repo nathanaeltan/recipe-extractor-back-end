@@ -1,0 +1,51 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+venv/
+.env/
+.venv/
+
+# Environment variables and config
+.env
+.env.*
+
+# Pytest cache
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+*.log
+
+# VS Code / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Build and dist folders (if using setup.py or poetry)
+build/
+dist/
+*.egg-info/
+
+# MyPy and Pylint
+.mypy_cache/
+.pyre/
+.pytype/
+pylint-report.txt
+
+# Database (optional - if using SQLite)
+*.sqlite3
+
+# Node stuff (optional, if you're using a frontend in same repo)
+node_modules/
+
+# Docker
+__docker_cache__/
