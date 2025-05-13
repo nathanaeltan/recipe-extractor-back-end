@@ -8,3 +8,4 @@ class Recipe(BaseModel):
     title: str
     ingredients: List[str]
     instructions: List[str]
+    original_url: str

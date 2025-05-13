@@ -1,14 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 import json
-from app.models.models import User, Recipe as RecipeModel
+from app.models.models import User, Recipe as RecipeModel, MealPlan as MealPlanModel
 from recipe_scrapers import scrape_me
 from app.utils.ollama_utils import extract_recipe_via_ollama
-from app.schemas.schemas import RecipeURL, ExtractedRecipe, UserCreate, Recipe
+from app.schemas.schemas import RecipeURL, ExtractedRecipe, UserCreate, Recipe, MealPlanCreate, MealPlan
 from app.database import SessionLocal
 from fastapi.security import OAuth2PasswordRequestForm
 from app.utils.auth import get_password_hash, authenticate_user, create_access_token, get_current_user
 from typing import List
+from datetime import date
 router = APIRouter()
 
 def get_db():
@@ -43,15 +44,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 async def extract_recipe(recipe_url: RecipeURL):
     """
     Attempts to extract a recipe using recipe-scrapers.
-    If the website isn't supported, falls back to using Ollama.
+    If the website isn't supported, falls back to using GPT.
     """
     try:
         scraper = scrape_me(recipe_url.url)
         title = scraper.title()
         ingredients = scraper.ingredients()
         raw_instructions = scraper.instructions()
+        image_url = scraper.image()
         instructions = [step.strip() for step in raw_instructions.split("\n") if step.strip()]
-        return ExtractedRecipe(title=title, ingredients=ingredients, instructions=instructions)
+        return ExtractedRecipe(title=title, ingredients=ingredients, instructions=instructions, original_url=recipe_url.url, image_url=image_url)
     except Exception as e:
         error_msg = str(e).lower()
         if "not supported" in error_msg:
@@ -73,7 +75,9 @@ async def save_recipe(
         title=recipe.title,
         ingredients=json.dumps(recipe.ingredients),
         instructions=json.dumps(recipe.instructions),
-        owner_email=current_user.email  # determined securely via JWT
+        owner_email=current_user.email,
+        original_url=recipe.original_url,
+        image_url=recipe.image_url,
     )
 
     db.add(db_recipe)
@@ -84,7 +88,9 @@ async def save_recipe(
         id=db_recipe.id,
         title=db_recipe.title,
         ingredients=recipe.ingredients,
-        instructions=recipe.instructions
+        instructions=recipe.instructions,
+        original_url=recipe.original_url,
+        image_url=recipe.image_url,
     )
 
 @router.get("/recipes", response_model=List[Recipe])
@@ -101,11 +107,69 @@ async def get_user_recipes(
             id=recipe.id,
             title=recipe.title,
             ingredients=json.loads(recipe.ingredients),
-            instructions=json.loads(recipe.instructions)
+            instructions=json.loads(recipe.instructions),
+            original_url=recipe.original_url,
+            image_url=recipe.image_url,
         )
         for recipe in recipes
     ]
 
+
+@router.post("/meal-plans", response_model=MealPlan)
+async def create_meal_plan(
+    meal_plan: MealPlanCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_meal_plan = MealPlanModel(
+        user_email=current_user.email,
+        date=meal_plan.date,
+        meal_type=meal_plan.meal_type,
+        recipe_id=meal_plan.recipe_id,
+    )
+    db.add(db_meal_plan)
+    db.commit()
+    db.refresh(db_meal_plan)
+    return db_meal_plan
+
+@router.get("/meal-plans", response_model=List[MealPlan])
+async def get_meal_plans(
+    start_date: date,
+    end_date: date,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    meal_plans = db.query(MealPlanModel).filter(
+        MealPlanModel.user_email == current_user.email,
+        MealPlanModel.date >= start_date,
+        MealPlanModel.date <= end_date
+    ).all()
+    return [
+        MealPlan(
+            id=meal_plan.id,
+            date=meal_plan.date,
+            meal_type=meal_plan.meal_type,
+            recipe_id=meal_plan.recipe_id,
+            recipe_title=meal_plan.recipe.title if meal_plan.recipe else None
+        )
+        for meal_plan in meal_plans
+    ]
+
+@router.delete("/meal-plans/{meal_plan_id}")
+async def delete_meal_plan(
+    meal_plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    meal_plan = db.query(MealPlanModel).filter(
+        MealPlanModel.id == meal_plan_id,
+        MealPlanModel.user_email == current_user.email
+    ).first()
+    if not meal_plan:
+        raise HTTPException(status_code=404, detail="Meal plan not found")
+    db.delete(meal_plan)
+    db.commit()
+    return {"message": "Meal plan deleted successfully"}
 @router.get("/health")
 async def health_check():
     return {"status": "healthy"}
