@@ -65,10 +65,7 @@ async def extract_recipe(recipe_url: RecipeURL):
         error_msg = str(e).lower()
         print(error_msg, "ERROR MESSAGE")
         if "not supported" in error_msg:
-            try:
-                return extract_recipe_via_ollama(recipe_url.url)
-            except Exception as llm_e:
-                raise HTTPException(status_code=500, detail=f"Fallback LLM extraction failed: {str(llm_e)}")
+            raise HTTPException(status_code=400, detail=f"This website is not supported right now. Please try another one.")
         else:
             raise HTTPException(status_code=400, detail=f"Error extracting recipe: {str(e)}")
 
