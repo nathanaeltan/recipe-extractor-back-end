@@ -123,6 +123,30 @@ async def get_user_recipes(
     ]
 
 
+@router.delete("/recipes/{recipe_id}")
+async def delete_recipe(
+    recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Deletes a recipe by its ID if it belongs to the current user.
+    """
+    # Query the recipe by ID and ensure it belongs to the current user
+    recipe = db.query(RecipeModel).filter(
+        RecipeModel.id == recipe_id,
+        RecipeModel.owner_email == current_user.email
+    ).first()
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # Delete the recipe
+    db.delete(recipe)
+    db.commit()
+
+    return {"message": "Recipe deleted successfully"}
+
 @router.post("/meal-plans", response_model=MealPlan)
 async def create_meal_plan(
     meal_plan: MealPlanCreate,

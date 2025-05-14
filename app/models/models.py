@@ -40,7 +40,7 @@ class MealPlan(Base):
     user_email = Column(String, ForeignKey('users.email'))
     date = Column(Date, nullable=False)
     meal_type = Column(Enum(MealType), nullable=False)
-    recipe_id = Column(Integer, ForeignKey('recipes.id'), nullable=True)
+    recipe_id = Column(Integer, ForeignKey('recipes.id', ondelete="CASCADE"), nullable=True)
 
     user = relationship('User', back_populates='meal_plans')
     recipe = relationship('Recipe')
