@@ -1,3 +1,4 @@
+import os
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -6,11 +7,12 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.models.models import User
 from app.database import get_db
+# from dotenv import load_dotenv
+# load_dotenv()
 
-SECRET_KEY = "YOUR_SECRET_KEY_HERE"  # replace securely
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60*24*7  # one week expiry
-
+SECRET_KEY = os.getenv("SECRET_KEY") # replace securely
+ALGORITHM = os.getenv("ALGORITHM") # replace securely
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))  # one week expiry
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

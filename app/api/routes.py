@@ -3,11 +3,14 @@ from sqlalchemy.orm import Session
 import json
 from app.models.models import User, Recipe as RecipeModel, MealPlan as MealPlanModel
 from recipe_scrapers import scrape_me
+from pytubefix import YouTube
 from app.utils.ollama_utils import extract_recipe_via_ollama
 from app.schemas.schemas import RecipeURL, ExtractedRecipe, UserCreate, Recipe, MealPlanCreate, MealPlan
 from app.database import SessionLocal
 from fastapi.security import OAuth2PasswordRequestForm
 from app.utils.auth import get_password_hash, authenticate_user, create_access_token, get_current_user
+from app.utils.youtube_utils import extract_youtube_video_details
+
 from typing import List
 from datetime import date
 router = APIRouter()
@@ -47,15 +50,20 @@ async def extract_recipe(recipe_url: RecipeURL):
     If the website isn't supported, falls back to using GPT.
     """
     try:
-        scraper = scrape_me(recipe_url.url)
-        title = scraper.title()
-        ingredients = scraper.ingredients()
-        raw_instructions = scraper.instructions()
-        image_url = scraper.image()
-        instructions = [step.strip() for step in raw_instructions.split("\n") if step.strip()]
-        return ExtractedRecipe(title=title, ingredients=ingredients, instructions=instructions, original_url=recipe_url.url, image_url=image_url)
+        if "youtube.com" in recipe_url.url or "youtu.be" in recipe_url.url:
+            # Extract the YouTube video description
+            return extract_youtube_video_details(recipe_url.url)
+        else:
+            scraper = scrape_me(recipe_url.url)
+            title = scraper.title()
+            ingredients = scraper.ingredients()
+            raw_instructions = scraper.instructions()
+            image_url = scraper.image()
+            instructions = [step.strip() for step in raw_instructions.split("\n") if step.strip()]
+            return ExtractedRecipe(title=title, ingredients=ingredients, instructions=instructions, original_url=recipe_url.url, image_url=image_url)
     except Exception as e:
         error_msg = str(e).lower()
+        print(error_msg, "ERROR MESSAGE")
         if "not supported" in error_msg:
             try:
                 return extract_recipe_via_ollama(recipe_url.url)

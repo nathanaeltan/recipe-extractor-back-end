@@ -11,3 +11,7 @@ passlib[bcrypt]
 pydantic[email]
 python-jose[cryptography]
 alembic
+pytube
+pytubefix
+openai
+python-dotenv
