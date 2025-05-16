@@ -2,9 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 import json
 from app.models.models import User, Recipe as RecipeModel, MealPlan as MealPlanModel
-from recipe_scrapers import scrape_me
-from pytubefix import YouTube
-from app.utils.ollama_utils import extract_recipe_via_ollama
+from recipe_scrapers import scrape_me, SCRAPERS
 from app.schemas.schemas import RecipeURL, ExtractedRecipe, UserCreate, Recipe, MealPlanCreate, MealPlan
 from app.database import SessionLocal
 from fastapi.security import OAuth2PasswordRequestForm
@@ -41,7 +39,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
-
+@router.get("/supported-sites", response_model=List[str])
+async def get_supported_sites():
+    """
+    Returns a list of all valid sites supported by the recipe-scrapers library.
+    """
+    return list(SCRAPERS.keys())
 
 @router.post("/extract-recipe")
 async def extract_recipe(recipe_url: RecipeURL, current_user: User = Depends(get_current_user)):
