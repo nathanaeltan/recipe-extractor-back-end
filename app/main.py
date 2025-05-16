@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from app.api.routes import router as api_router
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-
+import os
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
 Base.metadata.create_all(engine)
 
@@ -10,7 +11,7 @@ app = FastAPI(title="Recipe Extractor API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
