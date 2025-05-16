@@ -10,7 +10,7 @@ from app.database import SessionLocal
 from fastapi.security import OAuth2PasswordRequestForm
 from app.utils.auth import get_password_hash, authenticate_user, create_access_token, get_current_user
 from app.utils.youtube_utils import extract_youtube_video_details
-
+import os
 from typing import List
 from datetime import date
 router = APIRouter()
@@ -44,7 +44,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 
 @router.post("/extract-recipe")
-async def extract_recipe(recipe_url: RecipeURL):
+async def extract_recipe(recipe_url: RecipeURL, current_user: User = Depends(get_current_user)):
     """
     Attempts to extract a recipe using recipe-scrapers.
     If the website isn't supported, falls back to using GPT.
@@ -52,6 +52,9 @@ async def extract_recipe(recipe_url: RecipeURL):
     try:
         if "youtube.com" in recipe_url.url or "youtu.be" in recipe_url.url:
             # Extract the YouTube video description
+            ALLOWED_GPT_EMAILS = os.getenv("ALLOWED_GPT_EMAILS", "").split(",")
+            if current_user.email not in ALLOWED_GPT_EMAILS:
+                raise HTTPException(status_code=403, detail="You are not allowed to use this feature.")
             return extract_youtube_video_details(recipe_url.url)
         else:
             scraper = scrape_me(recipe_url.url)
